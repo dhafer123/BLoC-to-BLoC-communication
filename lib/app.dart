@@ -17,6 +17,8 @@ class ShelfApp extends StatelessWidget {
     title: 'Shelf',
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
+    darkTheme: AppTheme.dark,
+    themeMode: ThemeMode.system,
     home: MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => getIt<AuthBloc>()..add(AuthStarted())),

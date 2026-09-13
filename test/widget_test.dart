@@ -7,7 +7,7 @@ void main() {
   testWidgets('renders the Shelf catalog', (tester) async {
     configureDependencies();
     await tester.pumpWidget(const ShelfApp());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(find.text('SHELF'), findsOneWidget);
     expect(find.text('Find your next\nsmall obsession.'), findsOneWidget);

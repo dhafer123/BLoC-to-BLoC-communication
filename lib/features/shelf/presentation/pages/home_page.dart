@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../checkout/presentation/bloc/checkout_bloc.dart';
@@ -23,7 +24,7 @@ class HomePage extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _Header(columns: columns)),
+            const SliverToBoxAdapter(child: _Header()),
             SliverToBoxAdapter(child: _StatusStrip()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
@@ -53,15 +54,13 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const _CheckoutBar(),
+      bottomNavigationBar: const SafeArea(top: false, child: _CheckoutBar()),
     );
   }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.columns});
-
-  final int columns;
+  const _Header();
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -88,6 +87,17 @@ class _Header extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(width: 12),
+                BlocBuilder<ShelfBloc, List<Book>>(
+                  builder: (context, shelf) => Badge(
+                    isLabelVisible: shelf.isNotEmpty,
+                    label: Text('${shelf.length}'),
+                    child: IconButton(
+                      tooltip: 'Your shelf',
+                      onPressed: () {},
+                      icon: const Icon(Icons.bookmark_border_rounded),
+                    ),
+                  ),
+                ),
                 IconButton(
                   tooltip: signedIn ? 'Sign out' : 'Sign in',
                   onPressed: () => context.read<AuthBloc>().add(
@@ -109,33 +119,46 @@ class _Header extends StatelessWidget {
 class _StatusStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocBuilder<ConnectivityBloc, bool>(
-    builder: (context, isOnline) => AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: isOnline ? const Color(0xFFDCEFE4) : const Color(0xFFF7D7CE),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-            size: 17,
+    builder: (context, isOnline) {
+      final statusColor = isOnline
+          ? const Color(0xFF1B4A3B)
+          : const Color(0xFF7A3026);
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isOnline ? const Color(0xFFDCEFE4) : const Color(0xFFF7D7CE),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          child: Row(
+            key: ValueKey(isOnline),
+            children: [
+              Icon(
+                isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                color: statusColor,
+                size: 17,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isOnline ? 'You are online' : 'Offline mode',
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                isOnline ? 'Borrowing is available' : 'Your shelf is saved',
+                style: TextStyle(color: statusColor, fontSize: 14),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            isOnline ? 'You are online' : 'Offline mode',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const Spacer(),
-          Text(
-            isOnline ? 'Borrowing is available' : 'Your shelf is saved',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    ),
+        ),
+      ).animate().fadeIn(duration: 400.ms);
+    },
   );
 }
 
@@ -154,7 +177,7 @@ class _Intro extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyLarge,
       ),
     ],
-  );
+  ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.08, end: 0);
 }
 
 class _BookCard extends StatelessWidget {
@@ -167,6 +190,11 @@ class _BookCard extends StatelessWidget {
     final isAdded = context.select<ShelfBloc, bool>(
       (bloc) => bloc.state.any((item) => item.id == book.id),
     );
+    final coverColor = Color(book.coverColor);
+    final coverInk =
+        ThemeData.estimateBrightnessForColor(coverColor) == Brightness.light
+        ? const Color(0xFF172121)
+        : Colors.white;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -175,7 +203,7 @@ class _BookCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Color(book.coverColor),
+              color: coverColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -187,7 +215,7 @@ class _BookCard extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.4,
-                  ),
+                  ).copyWith(color: coverInk),
                 ),
                 const Spacer(),
                 Text(
@@ -198,14 +226,14 @@ class _BookCard extends StatelessWidget {
                     fontSize: 23,
                     height: 0.98,
                     fontWeight: FontWeight.w700,
-                  ),
+                  ).copyWith(color: coverInk),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   book.author,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: 13, color: coverInk),
                 ),
               ],
             ),
@@ -237,7 +265,7 @@ class _BookCard extends StatelessWidget {
           ],
         ),
       ],
-    );
+    ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.04, end: 0);
   }
 }
 
@@ -248,56 +276,62 @@ class _CheckoutBar extends StatelessWidget {
   Widget build(
     BuildContext context,
   ) => BlocBuilder<CheckoutBloc, CheckoutState>(
-    builder: (context, state) => Container(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, -5),
+    builder: (context, state) => AnimatedOpacity(
+      duration: const Duration(milliseconds: 250),
+      opacity: state.canCheckout || state.isSubmitting ? 1 : 0.82,
+      child: IgnorePointer(
+        ignoring: !state.canCheckout,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, -5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${state.itemCount} ${state.itemCount == 1 ? 'book' : 'books'} on your shelf',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  state.completed
-                      ? 'Borrowed. Enjoy the beginning.'
-                      : state.reason,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          FilledButton.icon(
-            onPressed: state.canCheckout
-                ? () => context.read<CheckoutBloc>().add(CheckoutRequested())
-                : null,
-            icon: state.isSubmitting
-                ? const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${state.itemCount} ${state.itemCount == 1 ? 'book' : 'books'} on your shelf',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
-                  )
-                : const Icon(Icons.arrow_forward_rounded),
-            label: const Text('Borrow shelf'),
+                    const SizedBox(height: 3),
+                    Text(
+                      state.completed
+                          ? 'Borrowed. Enjoy the beginning.'
+                          : state.reason,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              FilledButton.icon(
+                onPressed: () =>
+                    context.read<CheckoutBloc>().add(CheckoutRequested()),
+                icon: state.isSubmitting
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.arrow_forward_rounded),
+                label: const Text('Borrow shelf'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     ),
   );
