@@ -26,12 +26,26 @@ class HomePage extends StatelessWidget {
           slivers: [
             const SliverToBoxAdapter(child: _Header()),
             SliverToBoxAdapter(child: _StatusStrip()),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              sliver: SliverToBoxAdapter(child: _Intro()),
+            SliverAppBar.large(
+              pinned: true,
+              expandedHeight: 124,
+              title: const Text('Find your next\nsmall obsession.'),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 68, 24, 12),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      'A quiet place for books you want to carry with you.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                ),
+              ),
             ),
+            const SliverToBoxAdapter(child: _ShelfSummary()),
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               sliver: BlocBuilder<ShelfBloc, List<Book>>(
                 builder: (context, shelf) {
                   final catalog = context.read<ShelfBloc>().catalog;
@@ -50,7 +64,6 @@ class HomePage extends StatelessWidget {
                 },
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),
@@ -162,22 +175,51 @@ class _StatusStrip extends StatelessWidget {
   );
 }
 
-class _Intro extends StatelessWidget {
+class _ShelfSummary extends StatelessWidget {
+  const _ShelfSummary();
+
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'Find your next\nsmall obsession.',
-        style: Theme.of(context).textTheme.displaySmall,
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<CheckoutBloc, CheckoutState>(
+    builder: (context, state) => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                state.itemCount == 0
+                    ? Icons.menu_book_outlined
+                    : Icons.bookmark_added_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${state.itemCount} ${state.itemCount == 1 ? 'book' : 'books'} on your shelf',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      state.completed
+                          ? 'Borrowed. Enjoy the beginning.'
+                          : state.reason,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      const SizedBox(height: 12),
-      Text(
-        'A quiet place for books you want to carry with you.',
-        style: Theme.of(context).textTheme.bodyLarge,
-      ),
-    ],
-  ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.08, end: 0);
+    ),
+  );
 }
 
 class _BookCard extends StatelessWidget {
@@ -199,70 +241,66 @@ class _BookCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: coverColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  book.category,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.4,
-                  ).copyWith(color: coverInk),
+          child: Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: coverColor,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const Spacer(),
-                Text(
-                  book.title,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 23,
-                    height: 0.98,
-                    fontWeight: FontWeight.w700,
-                  ).copyWith(color: coverInk),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book.category,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.4,
+                      ).copyWith(color: coverInk),
+                    ),
+                    const Spacer(),
+                    Text(
+                      book.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 23,
+                        height: 0.98,
+                        fontWeight: FontWeight.w700,
+                      ).copyWith(color: coverInk),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      book.author,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: coverInk),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  book.author,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: coverInk),
+              ),
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: IconButton.filled(
+                  tooltip: isAdded ? 'Remove from shelf' : 'Add to shelf',
+                  onPressed: () => context.read<ShelfBloc>().add(
+                    isAdded ? ShelfBookRemoved(book) : ShelfBookAdded(book),
+                  ),
+                  icon: Icon(isAdded ? Icons.check_rounded : Icons.add_rounded)
+                      .animate(target: isAdded ? 1 : 0)
+                      .scale(
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.2, 1.2),
+                        duration: 150.ms,
+                      ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 9),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                book.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: isAdded ? 'Remove from shelf' : 'Add to shelf',
-              onPressed: () => context.read<ShelfBloc>().add(
-                isAdded ? ShelfBookRemoved(book) : ShelfBookAdded(book),
-              ),
-              icon: Icon(
-                isAdded
-                    ? Icons.check_circle_rounded
-                    : Icons.add_circle_outline_rounded,
-              ),
-            ),
-          ],
         ),
       ],
     ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.04, end: 0);
@@ -273,66 +311,46 @@ class _CheckoutBar extends StatelessWidget {
   const _CheckoutBar();
 
   @override
-  Widget build(
-    BuildContext context,
-  ) => BlocBuilder<CheckoutBloc, CheckoutState>(
-    builder: (context, state) => AnimatedOpacity(
-      duration: const Duration(milliseconds: 250),
-      opacity: state.canCheckout || state.isSubmitting ? 1 : 0.82,
-      child: IgnorePointer(
-        ignoring: !state.canCheckout,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, -5),
+  Widget build(BuildContext context) =>
+      BlocBuilder<CheckoutBloc, CheckoutState>(
+        builder: (context, state) => AnimatedOpacity(
+          duration: const Duration(milliseconds: 250),
+          opacity: state.canCheckout ? 1 : 0.4,
+          child: IgnorePointer(
+            ignoring: !state.canCheckout,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 18,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${state.itemCount} ${state.itemCount == 1 ? 'book' : 'books'} on your shelf',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      state.completed
-                          ? 'Borrowed. Enjoy the beginning.'
-                          : state.reason,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () =>
+                        context.read<CheckoutBloc>().add(CheckoutRequested()),
+                    icon: state.isSubmitting
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.arrow_forward_rounded),
+                    label: const Text('Borrow shelf'),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    context.read<CheckoutBloc>().add(CheckoutRequested()),
-                icon: state.isSubmitting
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.arrow_forward_rounded),
-                label: const Text('Borrow shelf'),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 }
